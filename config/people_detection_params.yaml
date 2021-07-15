@@ -17,5 +17,8 @@ vox_s: 0.03
 use_rgb_stream: false
 color: { r: 0, g: 230, b: 190 }
 
+# Toggle velocity tracking and projection
+use_velocity: false
+
 # Depth camera intrinsics (does influence person cluster recognition)
 intrinsics: { f_x: 387.4, f_y: 387.4, ppx: 281.7, ppy: 242.2, s: 0.0 }

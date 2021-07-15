@@ -1,5 +1,7 @@
 #include "../include/pcl_detector.h"
 #include "../include/terminal.h"
+#include "../include/velocity_estimation.h"
+#include <unordered_map>
 
 // PCL viewer //
 pcl::visualization::PCLVisualizer viewer("PCL Viewer");
@@ -44,7 +46,8 @@ void pp_callback(const pcl::visualization::PointPickingEvent &event,
 }
 
 void terminal_output(int people, float avg_framerate, float conf, float min_h,
-                     float max_h, float vox_s, float closest) {
+                     float max_h, float vox_s, float closest, bool use_velocity,
+                     std::unordered_map<int, double> velocities) {
   std::string separator =
       "*******************************************************";
   std::string highlight = color(Term::fg::bright_green);
@@ -80,17 +83,26 @@ void terminal_output(int people, float avg_framerate, float conf, float min_h,
     std::cout << (closest * 3.28084) << " ft";
   }
   std::cout << normal << std::endl;
-  std::string status = color(Term::fg::white) + "Clear" + reset;
+  std::string status = color(Term::fg::white) + "Clear" + normal;
   if (closest < 1 && closest >= 0) {
-    status = color(Term::fg::red) + "Close" + reset;
+    status = color(Term::fg::red) + "Close" + normal;
   } else if (closest < 1.5 && closest > 0) {
-    status = color(Term::fg::bright_magenta) + "Careful" + reset;
+    status = color(Term::fg::bright_magenta) + "Careful" + normal;
   } else if (closest < 2 && closest > 0) {
-    status = color(Term::fg::yellow) + "Safe" + reset;
+    status = color(Term::fg::yellow) + "Safe" + normal;
   } else if (closest < 20 && closest > 0) {
-    status = highlight + "Detected" + reset;
+    status = highlight + "Detected" + normal;
   }
   std::cout << "Status: " << status << std::endl;
+  if (use_velocity) {
+    std::cout << std::endl;
+    std::cout << "Estimated velocities:" << std::endl;
+    for (auto iter = velocities.begin(); iter != velocities.end(); ++iter) {
+      std::cout << " " << highlight << iter->first << normal << ": " << info
+                << iter->second << " units/sec" << std::endl;
+    }
+  }
+  std::cout << reset << std::endl;
 }
 
 int detect(int argc, char **argv, pcl::Grabber *interface) {
@@ -107,6 +119,7 @@ int detect(int argc, char **argv, pcl::Grabber *interface) {
   float voxel_size = config["vox_s"].as<float>();
 
   bool use_rgb_stream = config["use_rgb_stream"].as<bool>();
+  bool use_velocity = config["use_velocity"].as<bool>();
 
   // Set camera intrinsics
   Eigen::Matrix3f rgb_intrinsics_matrix;
@@ -209,6 +222,12 @@ int detect(int argc, char **argv, pcl::Grabber *interface) {
   static double last = pcl::getTime();
   static float avg_framerate = 0.0;
 
+  // Velocity estimation object
+  velocity_estimation velocity =
+      velocity_estimation(std::chrono::system_clock::now());
+  std::unordered_map<int, double> velocity_estimates =
+      std::unordered_map<int, double>();
+
   // Main loop:
   while (!viewer.wasStopped()) {
     if (new_cloud_available_flag &&
@@ -249,6 +268,13 @@ int detect(int argc, char **argv, pcl::Grabber *interface) {
         {
           // draw theoretical person bounding box in the PCL viewer:
           it->drawTBoundingBox(viewer, k);
+          // estimate velocity if enabled
+          if (use_velocity) {
+            velocity_estimates.insert(
+                {k, velocity.estimate(std::chrono::system_clock::now(), k,
+                                      it->getCenter(), viewer)});
+          }
+
           k++;
           // update the distance between the sensor and closest cluster
           if (closest == -1 || closest > it->getDistance()) {
@@ -267,10 +293,12 @@ int detect(int argc, char **argv, pcl::Grabber *interface) {
         last = now;
       }
 
-      terminal_output(k, avg_framerate, min_confidence, min_height, max_height,
-                      voxel_size, closest);
-
       cloud_mutex.unlock();
+
+      terminal_output(k, avg_framerate, min_confidence, min_height, max_height,
+                      voxel_size, closest, use_velocity, velocity_estimates);
+
+      velocity_estimates.clear();
     }
   }
 }
