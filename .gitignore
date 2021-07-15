@@ -34,3 +34,6 @@
 # Folders
 .vscode
 build
+
+# Specific files
+test.cpp
