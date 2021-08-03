@@ -52,13 +52,16 @@ People detection using RGB-D generated point clouds.
   3. Edit this however you wish. The changes will take place when you rebuild the executables.
       - Place `viewer.setRepresentationToWireframeForAllActors();` beneath line 388 to view the boxes as outlines rather than solid blocks.
 
+## Velocity Tracking and Projection
+- You can toggle velocity tracking and projection in the `config/people_detection_params.yaml` file. This feature will list all frame-by-frame estimated velocities in the terminal and will draw a line forward from each person's head representing their velocity in 3D space.
+  - Because prior positions used in the velocity measurements are saved by cluster index, the program will have a hard time tracking multiple clusters separately when their indices might change between frames. 
+
 ## Known Issues
 - The closest distance is only listed in multiples of a meter.
   - Next step: take a closer look at how the `getDistance` method on line 255 works
 
 ## Planned Features
 #### Next Up
-- Velocity estimation
 - Improved machine learning model
 #### Stretch Goals
 - Automated ground plane selection

@@ -11,7 +11,7 @@ include_directories(${PCL_INCLUDE_DIRS} "./include")
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
-set(SOURCES src/pcl_detector.cpp src/real_sense_2_grabber.cpp include/real_sense_2_grabber.h include/pcl_detector.h)
+set(SOURCES src/pcl_detector.cpp src/real_sense_2_grabber.cpp src/velocity_estimation.cpp include/real_sense_2_grabber.h include/velocity_estimation.h include/pcl_detector.h)
 
 # People detection executable with console argument options
 add_executable (people_detection MACOSX_BUNDLE src/people_detection.cpp ${SOURCES})
